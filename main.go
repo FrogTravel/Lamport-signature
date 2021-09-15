@@ -11,6 +11,7 @@ import(
 const (
 	numberOfPairs = 256
 	byteLength = 8
+	bytesNumberInBlock = 32 // 32 * 8 = 256 bits -> real length of each block
 )
 
 func main(){
@@ -27,7 +28,7 @@ func main(){
 
 // Method to generate a single block of 256 signature length. Creates a block of length 32 byte (256 bit) and fills it with random numbers
 func generateBlock() (block []byte) {
-	block = make([]byte, 32)
+	block = make([]byte, bytesNumberInBlock)
 	rand.Read(block)
 	return 
 }
@@ -65,15 +66,15 @@ func Sign(stringMessage string, privateKey [numberOfPairs][2][]byte) (signedMess
 	message := []byte(stringMessage)
 	hashedMessage := sha256.Sum256(message)
 
-	complexMessage := [32][8][]byte{}
+	complexMessage := [bytesNumberInBlock][8][]byte{}
 
-	for i := 0; i < 32; i++ { // the length if message is 256 bit -> 32 bytes. We can iterate only byte by byte (by numbers in array). It means I have to iterate 32 times
+	for i := 0; i < bytesNumberInBlock; i++ { // the length if message is 256 bit -> 32 bytes. We can iterate only byte by byte (by numbers in array). It means I have to iterate 32 times
 		complexMessage[i] = getSignForNumber(hashedMessage[i], privateKey[8 * i : 8 * (i + 1)]) // В privateKey argument we have to pass privateKey 8 blocks
 	}
 
 	// flatting arrays 
 	index := 0
-	for i := 0; i < 32; i++ {
+	for i := 0; i < bytesNumberInBlock; i++ {
 		for j := 0; j < 8; j++ {
 			signedMessage[index] = complexMessage[i][j]
 			index = index + 1
@@ -101,8 +102,8 @@ func getSignForNumber(message byte, block [][2][]byte) (signedBlock [8][]byte) {
 // To verify the message (to verify that the person who claims it theirs message) we have to have the public key and the signed message. The latter is partial private key. 
 // What we have to do is to iterate throught each block in signed message, hash each block and to compare with public key. There is two blocks for each public key. 
 // We compare hashed message block with each block of public key. If they both are different then it is not verified. 
-func Verify(signedMessage [256][]byte, publicKey [numberOfPairs][2][]byte) (isVerified bool){
-	for i := 0; i < 256; i++ {
+func Verify(signedMessage [numberOfPairs][]byte, publicKey [numberOfPairs][2][]byte) (isVerified bool){
+	for i := 0; i < numberOfPairs; i++ {
 		hashedBlock := sha256.Sum256(signedMessage[i])
 		for j := range hashedBlock {
 			if hashedBlock[j] != publicKey[i][0][j] && hashedBlock[j] != publicKey[i][1][j]{
